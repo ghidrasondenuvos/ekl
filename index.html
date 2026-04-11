@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Εκλογικό Μέτρο · Κουτσές Έδρες</title>
+  <title>πολλά ζητάς</title>
   <!-- QRCode library -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
@@ -27,7 +27,7 @@
     .vote-btn.disabled { opacity: 0.3; pointer-events: none; }
     .vote-input { width: 65px; background: #2a2a2a; border: 1px solid #444; border-radius: 20px; padding: 10px 4px; text-align: center; color: white; font-size: 1rem; outline: none; }
     .blank-badge { background: #333; padding: 4px 8px; border-radius: 40px; font-size: 0.7rem; color: #ccc; margin-left: 4px; }
-    .reset-btn { background: rgba(207, 102, 121, 0.2); border: 1px solid #cf6679; color: #ffb3b3; padding: 12px 16px; border-radius: 40px; font-weight: 600; font-size: 0.9rem; width: 100%; margin-top: 12px; cursor: pointer; }
+    .reset-btn { background: rgba(207, 102, 121, 0.2); border: 1px solid #905; color: #ffb3b3; padding: 12px 16px; border-radius: 40px; font-weight: 600; font-size: 0.9rem; width: 100%; margin-top: 12px; cursor: pointer; }
     .seats-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
     .seats-table th { text-align: left; padding-bottom: 8px; font-weight: 600; color: #aaa; font-size: 0.8rem; }
     .seats-table td { padding: 8px 0; border-bottom: 1px solid #333; }
@@ -52,7 +52,7 @@
     .state-input { flex: 3; min-width: 200px; background: #2a2a2a; border: 1px solid #444; border-radius: 30px; padding: 12px 16px; color: white; font-family: monospace; font-size: 0.8rem; }
     .preset-select { flex: 1; min-width: 140px; background: #2a2a2a; border: 1px solid #444; border-radius: 30px; padding: 12px 16px; color: white; font-size: 0.9rem; outline: none; }
     .qr-container { display: flex; justify-content: center; margin-top: 8px; }
-    #qrCanvas { background: white; padding: 8px; border-radius: 16px; max-width: 160px; height: auto; }
+    #qrCanvas { background: white; padding: 8px; border-radius: 16px; width: 160px; height: 160px; }
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .button-group button { flex: 1 0 120px; background: #333; border: 1px solid #555; border-radius: 40px; padding: 12px 0; color: white; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
     .stats-row { display: flex; justify-content: space-around; margin: 16px 0 8px; }
@@ -66,21 +66,21 @@
   <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.15.3/umd/Recharts.js"></script>
+  <!-- Babel standalone -->
   <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 </head>
 <body>
 <div class="app">
-  <h1>🗳️ Πόση ώρα θα σου πάρει να βρεις την έδρα</h1>
+  <h1>🗳️ Πόση ώρα θα σου πάρει να βρεις την έδρα;</h1>
   <div id="root"></div>
 </div>
 
 <script type="text/babel">
-  const { useState, useMemo, useCallback, useEffect, useRef } = React;
+  const { useState, useMemo, useEffect, useRef } = React;
   const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, Cell, ReferenceLine } = Recharts;
 
   // Σταθερά χρώματα
   const PARTY_COLORS = ["#f58231", "#3cb44b", "#e6194b", "#ffb6c1", "#4363d8", "#911eb4", "#46f0f0", "#aaaaaa", "#888888"];
-  const DEFAULT_NAMES = ["ΠΑΣΠ", "ΚΚΕ", "ΕΑΑΚ", "ΑΡΑΝ", "ΝΑΡ", "ΔΑΠ", "ΣΣΠ", "Δίκτυο", "Λευκά"];
 
   const initialForces = [
     { id: "pasp", name: "ΠΑΣΠ", votes: 180, color: PARTY_COLORS[0] },
@@ -94,13 +94,13 @@
     { id: "blank", name: "Λευκά", votes: 7, isWhite: true, color: PARTY_COLORS[8] },
   ];
 
-  // Presets
+  // Presets (με κόμμα)
   const PRESETS = {
-    "CEID25": "7,0,1,148,150,107,33,5,36,2,4,11"
+    "CEID25": "7,13,1,148,150,107,33,5,36,2,4,11",
+    "CEID24": "7,8,1,177,186,85,31,10,23,4,0,7"
   };
 
-  // --- Κωδικοποίηση κατάστασης με κόμμα ---
-  // Μορφή: "έδρες,άκυρα,roundUp,ψήφος1,ψήφος2,...,ψήφος9"
+  // --- Κωδικοποίηση ---
   const encodeState = (seats, invalid, roundUp, forces) => {
     const votes = forces.map(f => f.votes);
     return [seats, invalid, roundUp ? 1 : 0, ...votes].join(',');
@@ -108,12 +108,8 @@
 
   const decodeState = (code) => {
     const parts = code.split(',').map(p => parseInt(p, 10));
-    if (parts.length !== 12) throw new Error("Λάθος μήκος κωδικού (αναμένονται 12 αριθμοί)");
-    const seats = parts[0];
-    const invalid = parts[1];
-    const roundUp = parts[2] === 1;
-    const votes = parts.slice(3);
-    return { seats, invalid, roundUp, votes };
+    if (parts.length !== 12) throw new Error("Λάθος μήκος κωδικού");
+    return { seats: parts[0], invalid: parts[1], roundUp: parts[2] === 1, votes: parts.slice(3) };
   };
 
   const App = () => {
@@ -125,10 +121,10 @@
     const [selectedPreset, setSelectedPreset] = useState("");
     const qrCanvasRef = useRef(null);
 
-    // Τα λευκά προσμετρώνται στα έγκυρα (totalValidVotes) αλλά δεν συμμετέχουν στην κατανομή (validForces)
-    const allVotes = useMemo(() => forces.reduce((s, f) => s + f.votes, 0), [forces]);
-    const totalValidVotes = allVotes; // έγκυρα = όλα (λευκά + παρατάξεις)
+    const totalValidVotes = useMemo(() => forces.reduce((s, f) => s + f.votes, 0), [forces]);
     const validForces = useMemo(() => forces.filter(f => !f.isWhite), [forces]);
+    const blankVotes = forces.find(f => f.isWhite)?.votes || 0;
+    const totalVoted = totalValidVotes + invalidVotes;
 
     const quota = useMemo(() => {
       const validSum = validForces.reduce((s, f) => s + f.votes, 0);
@@ -137,7 +133,6 @@
       return roundUp ? Math.ceil(raw) : Math.floor(raw);
     }, [validForces, totalSeats, roundUp]);
 
-    // Κατανομή εδρών (ίδιος αλγόριθμος)
     const { finalResults, seatLog, nextKoutsi, nextRemainder } = useMemo(() => {
       if (quota <= 0) return { finalResults: [], seatLog: [], nextKoutsi: null, nextRemainder: 0 };
       let temp = validForces.map(f => {
@@ -158,24 +153,28 @@
       }
       temp.sort((a, b) => b.remainder - a.remainder || b.votes - a.votes);
       const next = temp[0];
-      const nextName = next && next.remainder > 0 ? next.name : null;
-      const nextRem = next ? next.remainder : 0;
       temp.sort((a, b) => b.votes - a.votes);
-      return { finalResults: temp, seatLog: log, nextKoutsi: nextName, nextRemainder: nextRem };
+      return {
+        finalResults: temp,
+        seatLog: log,
+        nextKoutsi: next && next.remainder > 0 ? next.name : null,
+        nextRemainder: next ? next.remainder : 0
+      };
     }, [validForces, totalSeats, quota]);
 
-    // Αυτόματη ανανέωση κωδικού
     useEffect(() => {
       const code = encodeState(totalSeats, invalidVotes, roundUp, forces);
       setConfigCode(code);
     }, [forces, totalSeats, invalidVotes, roundUp]);
 
-    // QR code generation
+    // QR code update
     useEffect(() => {
       if (qrCanvasRef.current && configCode) {
-        QRCode.toCanvas(qrCanvasRef.current, configCode, { width: 160, margin: 1 }, (error) => {
-          if (error) console.error(error);
-        });
+        try {
+          QRCode.toCanvas(qrCanvasRef.current, configCode, { width: 160, margin: 1 });
+        } catch (e) {
+          console.warn("QR error", e);
+        }
       }
     }, [configCode]);
 
@@ -187,18 +186,16 @@
         setRoundUp(roundUp);
         setForces(prev => prev.map((f, i) => ({ ...f, votes: votes[i] })));
         return true;
-      } catch (e) {
-        alert("Μη έγκυρος κωδικός κατάστασης");
+      } catch {
+        alert("Μη έγκυρος κωδικός");
         return false;
       }
     };
 
-    const applyPreset = (presetKey) => {
-      const code = PRESETS[presetKey];
-      if (code) applyCode(code);
+    const applyPreset = (key) => {
+      if (PRESETS[key]) applyCode(PRESETS[key]);
     };
 
-    // Handlers
     const updateVote = (idx, delta) => {
       setForces(prev => {
         const upd = [...prev];
@@ -223,11 +220,11 @@
       const isLast = seatLog.length > 0 && e.name === seatLog[seatLog.length-1].split("➜ ")[1];
       return (
         <React.Fragment>
-          <text x={Number(x)+6} y={Number(y)+Number(height)/2} fill="#fff" fontSize={12} fontWeight="bold" dominantBaseline="middle">
+          <text x={Number(x)+6} y={Number(y)+Number(height)/2} fill="#fff" fontSize={14} fontWeight="bold" dominantBaseline="middle">
             {`${e.name} - ${e.votes} - ${e.finalSeats} - [${rem}]`}
           </text>
           {isLast && (
-            <text x={Number(x)+Number(width)+8} y={Number(y)+Number(height)/2} fill="#03dac6" fontSize={14} fontWeight="bold" dominantBaseline="middle">
+            <text x={Number(x)+Number(width)+8} y={Number(y)+Number(height)/2} fill="#03dac6" fontSize={16} fontWeight="bold" dominantBaseline="middle">
               ΚΟΥΤΣΗ
             </text>
           )}
@@ -264,11 +261,12 @@
             <div className="stats-row">
               <div className="stat"><div className="stat-value">{totalValidVotes}</div><div>Έγκυρα</div></div>
               <div className="stat"><div className="stat-value">{invalidVotes}</div><div>Άκυρα</div></div>
-              <div className="stat"><div className="stat-value">{forces.find(f=>f.isWhite)?.votes||0}</div><div>Λευκά</div></div>
+              <div className="stat"><div className="stat-value">{blankVotes}</div><div>Λευκά</div></div>
+              <div className="stat"><div className="stat-value">{totalVoted}</div><div>Ψήφισαν</div></div>
             </div>
           </div>
 
-          {/* Στήλη 2 – Κατανομή εδρών + Κατανομή Κουτσών */}
+          {/* Στήλη 2 – Έδρες & Κατανομή Κουτσών */}
           <div className="card">
             <div className="card-header">
               <div className="accent-bar" style={{background: '#03dac6'}}></div>
@@ -308,10 +306,10 @@
                     <XAxis type="number" allowDecimals={false} stroke="#888" />
                     <YAxis type="category" dataKey="name" stroke="#ccc" width={70} tick={{fontSize:12}} />
                     <Tooltip contentStyle={{backgroundColor:"#1e1e1e", border:"1px solid #333"}} labelStyle={{color:"#fff"}} />
-                    {[...Array(Math.floor(totalValidVotes / quota))].map((_,i)=>(
+                    {[...Array(Math.floor(validForces.reduce((s,f)=>s+f.votes,0) / quota))].map((_,i)=>(
                       <ReferenceLine key={i} x={(i+1)*quota} stroke="#555" strokeDasharray="4 4" />
                     ))}
-                    <Bar dataKey="votes" barSize={26} radius={[0,6,6,0]}>
+                    <Bar dataKey="votes" barSize={28} radius={[0,6,6,0]}>
                       <LabelList content={renderCustomLabel} />
                       {finalResults.map((entry) => <Cell key={entry.id} fill={entry.color} />)}
                     </Bar>
@@ -322,7 +320,7 @@
           </div>
         </div>
 
-        {/* Κάτω μέρος – Ρυθμίσεις & Κωδικός κατάστασης */}
+        {/* Ρυθμίσεις & Κωδικός */}
         <div className="card">
           <div className="settings-section">
             <div className="settings-grid">
@@ -354,6 +352,7 @@
                 <select className="preset-select" value={selectedPreset} onChange={e => { setSelectedPreset(e.target.value); if(e.target.value) applyPreset(e.target.value); }}>
                   <option value="">-- Presets --</option>
                   <option value="CEID25">CEID25</option>
+                  <option value="CEID24">CEID24</option>
                 </select>
               </div>
               <div className="button-group">
@@ -364,7 +363,7 @@
                 <canvas id="qrCanvas" ref={qrCanvasRef} width="160" height="160"></canvas>
               </div>
               <p style={{fontSize:'0.75rem', color:'#aaa', marginTop:8, textAlign:'center'}}>
-                Ο κωδικός ενημερώνεται αυτόματα. Σαρώστε το QR για άμεση μεταφορά.
+                Σαρώστε το QR για άμεση μεταφορά της κατάστασης.
               </p>
             </div>
           </div>
